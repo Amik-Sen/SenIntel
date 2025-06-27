@@ -15,3 +15,6 @@ But for someone who just wants casual logging and monitoring of performance of y
 So we will have two modes in the SDK:
 - `local` - creates a seperate json file in the project itself, and the dashboard uses this file.
 - `server` - give the server details and credentials, that will be used as the source for the dashboard.
+
+Currently we don't monitor the latency of an API call in the SDK. 
+I was thinking of doing the call through the SenIntel SDK to give SLA information and even interrupt calls if they are taking too much time.
