@@ -4,7 +4,7 @@ import path from "path";
 
 // Credential and Secrets for sending logs
 require('dotenv').config();
-backend_api = process.env.MONITOR_DB_URL;
+backend_log_api = process.env.MONITOR_DB_URL;
 
 // main sdk class
 class SenIntelSDK {
@@ -35,6 +35,63 @@ class SenIntelSDK {
 
   }
 
+  // this functions can be used 
+  async _request(method, path, options = {}) {
+    const url = new URL(`${this.endpoint}${path}`);
+    const startTime = Date.now();
+
+    let res;
+    let responseBody;
+    try {
+      const fetchOptions = {
+        method,
+        headers: this.headers,
+        ...(options.body && { body: JSON.stringify(options.body) }),
+      };
+
+      if (method === "GET" && options.params) {
+        Object.entries(options.params).forEach(([k, v]) =>
+          url.searchParams.append(k, v)
+        );
+      }
+
+      res = await fetch(url.toString(), fetchOptions);
+      responseBody = await res.json();
+    } catch (err) {
+      this.log("error", `HTTP ${method} ${path} failed`, {
+        error: err.message,
+        duration: Date.now() - startTime,
+      });
+      throw err;
+    }
+
+    // Log successful request
+    this.log("info", `HTTP ${method} ${path}`, {
+      status: res.status,
+      duration: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+    });
+
+    return responseBody;
+  }
+
+  // all requests from the logger
+  get(path, params = {}) {
+    return this._request("GET", path, { params });
+  }
+
+  post(path, body = {}) {
+    return this._request("POST", path, { body });
+  }
+
+  put(path, body = {}) {
+    return this._request("PUT", path, { body });
+  }
+
+  delete(path) {
+    return this._request("DELETE", path);
+  }
+
   log(type, message, context = {}) {
     const entry = {
       timestamp: Date.now(),
@@ -57,7 +114,7 @@ class SenIntelSDK {
     const logs = [...this.buffer];
     this.buffer = [];
 
-    fetch(`${this.endpoint}/log`, {
+    fetch(`${backend_log_api}/log`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(logs),
